@@ -1,0 +1,288 @@
+<html>
+    <title>%TITLE%</title>
+    <head>
+        <script
+			  src="https://code.jquery.com/jquery-3.2.1.js"
+			  integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE="
+			  crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+        <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
+        <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
+        
+
+        <!-- Css Roboto Fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+        
+        <!-- Local page style -->
+        <style>
+        body, html, #container {
+            height: 99%;
+            background-color: #34495E;
+            
+        }
+        a {
+            color: hotpink;
+        }
+        #top_div {
+            
+            width:99%;
+            
+            margin:auto;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        #bottom_div {
+            
+            width:99%;
+            margin:auto;
+            color:#FFFFFF;
+            font-family: 'Roboto', sans-serif;
+            overflow: scroll;
+        }
+        .jsgrid-table
+        {
+            
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        
+        
+         /* Style the tab */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #34495E;
+        }
+
+        /* Style the buttons that are used to open the tab content */
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #ddd;
+        }
+
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #ccc;
+        }
+
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+            
+        }
+        
+        .jsgrid-header-row > .jsgrid-header-cell {
+            background: #34495E;
+            color: #dd5;
+        }
+        
+        .jsgrid-row > .jsgrid-cell {
+            background: #34495E;
+            color: #FFF;
+        }
+        .jsgrid-alt-row > .jsgrid-cell {
+            background: #34495E;
+            color: #FFF;
+        }
+        
+        .jsgrid-pager {
+            padding: .5em 0;
+            color: #dd5;
+        }
+        .tab button.active {
+            background-color: #00FF1E;
+            color: black;
+            font-weight: bold;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            color: #dd5;
+        }
+        </style>
+        <!-- Local page code -->
+       
+    </head>
+    <body>
+        <!-- main container -->
+        <div id="container">
+            <!--  -->
+            <div id="top_div">
+                 <div id="entriesGrid"></div>
+            </div>    
+            <div id="bottom_div">
+                <!-- Tab links -->
+                <div class="tab">
+                  <button class="tablinks" onclick="openTab(event, 'request')">Request</button>
+                  <button class="tablinks" onclick="openTab(event, 'response')">Response</button>
+                  <button class="tablinks" onclick="openTab(event, 'render_response')">Response Rendering</button>
+                </div>
+                <div id="request" class="tabcontent" ></div>
+                <div id="response" class="tabcontent"></div>
+                <div id="render_response" class="tabcontent" ></div>
+            </div>
+        </div>
+    </body>
+    
+    <script>
+        // Global variables
+        var deserializedData = null;
+        var entryList = {};
+        var gridData = [];
+        
+        // Reads serialized data file and unserialize it
+        // :params file_name: the name file that contains the burpsuite saved items
+        function readDataAndUnserialize(file_name)
+        {
+            var result = false;
+            var xmlParser = new DOMParser();
+            var rawFile = new XMLHttpRequest();
+            rawFile.open("GET", file_name, false);
+            rawFile.onreadystatechange = function ()
+            {
+                if(rawFile.readyState === 4)
+                {
+                    if(rawFile.status === 200 || rawFile.status == 0)
+                    {
+                        var serializedData = rawFile.responseText;
+                        deserializedData = xmlParser.parseFromString(serializedData,"text/xml");
+                        result = true;
+                    }
+                }
+            }
+            rawFile.send(null);
+            
+            return result;
+        }
+        
+        /*function areParameterPresent(item)
+        {
+            if()
+        }*/
+        
+        // Software Entrypoint
+        var is_data_deserialized = readDataAndUnserialize("PlaySessionInjection_b64.xml");
+        //var is_data_deserialized = readDataAndUnserialize("%FILE_NAME%");
+        if (is_data_deserialized === true)
+        {
+            // Gets the entries
+            entryList = deserializedData.childNodes[1].childNodes
+            for( entryIdx=0; entryIdx < entryList.length; entryIdx++ ){
+                // Filters only the item entries
+                if( entryList[entryIdx].nodeName === "item" )
+                {
+                    gridData.push(
+                    {
+                        "Idx" : entryIdx,
+                        "Host": (entryList[entryIdx].children[2].textContent.length < 20) 
+                                ? entryList[entryIdx].children[2].textContent 
+                                : entryList[entryIdx].children[2].textContent.slice(0,20)+"...",
+                        
+                        "Method": entryList[entryIdx].children[5].textContent,
+                        "URL": (entryList[entryIdx].children[6].textContent.length < 20) 
+                                ? entryList[entryIdx].children[6].textContent 
+                                : entryList[entryIdx].children[6].textContent.slice(0,20)+"...",
+                        "Params": true,
+                        "Edited": "",
+                        "Status": entryList[entryIdx].children[9].textContent,
+                        "Length": entryList[entryIdx].children[10].textContent,
+                        "MIME type": entryList[entryIdx].children[11].textContent,
+                        "Extension": entryList[entryIdx].children[7].textContent,
+                        "Title": "",
+                        "Comment": entryList[entryIdx].children[13].textContent,
+                        "SSL": "",
+                        "IP": entryList[entryIdx].children[2].attributes[0].value,
+                        "Cookies": "",
+                        "Time": entryList[1].children[0].textContent,
+                        "Port": entryList[entryIdx].children[3].textContent,
+                    });
+                    
+                }
+            }
+        }
+
+        $("#entriesGrid").jsGrid({
+            width: "100%",
+            height: "400px",
+            pageSize: 10,
+            
+            filtering: false,
+            editing: true,
+            sorting: true,
+            paging: true,
+            autoload: true,
+            data: gridData,            
+            rowClick: function(item) {
+                    
+                    /* Updates the datails */
+                    $("#request")[0].innerText = atob(entryList[item.item.Idx].children[8].textContent);
+                    $("#response")[0].innerText = atob(entryList[item.item.Idx].children[12].textContent);
+                    $("#render_response")[0].innerHTML = atob(entryList[item.item.Idx].children[12].textContent).match(/(?:<html>((?:.*?\r?\n?)*)<\/html>)+/g);
+                    
+            },
+            
+            fields: [
+                { name: "Host", type: "text", width: 170 },
+                { name: "Method", type: "text", width: 70  },
+                { name: "URL", type: "text", width: 100 },
+                { name: "Params", type: "checkbox", width: 50},
+                { name: "Edited", type: "text", width: 50 },
+                { name: "Status", type: "text", width: 50  },
+                { name: "Length", type: "text", width: 100 },
+                { name: "MIME type", type: "text", width: 100 },
+                { name: "Extension", type: "text", width: 100},
+                { name: "Title", type: "text", width: 100},
+                { name: "Comment", type: "text", width: 100 },
+                { name: "SSL", type: "text", width: 50  },
+                { name: "IP", type: "text", width: 100  },
+                { name: "Cookies", type: "text", width: 100 },
+                { name: "Port", type: "text", width: 50 },
+                { name: "Time", type: "text", width: 100 },
+                { type: "control" }
+               
+            ]
+        });
+        
+        function openTab(evt, type) {
+            // Declare all variables
+            var i, tabcontent, tablinks;
+
+            // Gets all elements with class="tabcontent" and hide them
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Gets all elements with class="tablinks" and remove the class "active"
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Shows the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(type).style.display = "block";
+            evt.currentTarget.className += " active";
+            
+        } 
+    </script>
+    
+</html>
